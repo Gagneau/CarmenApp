@@ -1,15 +1,62 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Learn more: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+############################
+# Dependencies
+############################
 node_modules/
 
-# Expo
+############################
+# Expo / React Native
+############################
 .expo/
+.expo-shared/
 dist/
 web-build/
+build/
 expo-env.d.ts
 
-# Native
+############################
+# Generated native folders
+# (Keep ignored for Expo managed workflow.
+# If you "prebuild" or go bare and edit native code, remove these.)
+############################
+/ios
+/android
+
+############################
+# Environment & secrets
+############################
+.env
+.env.*
+.env*.local
+
+############################
+# Debug / logs
+############################
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+############################
+# Metro (React Native bundler)
+############################
+.metro-health-check*
+
+############################
+# macOS
+############################
+.DS_Store
+*.pem
+
+############################
+# TypeScript
+############################
+*.tsbuildinfo
+
+############################
+# Kotlin / Android signing
+############################
 .kotlin/
 *.orig.*
 *.jks
@@ -18,26 +65,7 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
+############################
+# Project-specific examples
+############################
 app-example
-
-# generated native folders
-/ios
-/android
