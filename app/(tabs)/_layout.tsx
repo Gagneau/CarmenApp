@@ -15,7 +15,9 @@ export default function TabsLayout() {
   const hasMultiple = children.length > 1;
   const canPick = hasMultiple && (isAdult || isAdmin);
 
-  useEffect(() => { if (ready && !user) router.replace('/'); }, [ready, user]);
+  useEffect(() => {
+    if (ready && !user) router.replace('/');
+  }, [ready, user]);
 
   const cycleChild = () => {
     if (!canPick) return;
@@ -42,7 +44,13 @@ export default function TabsLayout() {
           <Text style={{ color: '#4338ca' }}>Child: {childName || '—'}</Text>
         </Pressable>
       )}
-      <Pressable onPress={async () => { await signOut(); router.replace('/'); }} style={{ paddingRight: 4 }}>
+      <Pressable
+        onPress={async () => {
+          await signOut();
+          router.replace('/');
+        }}
+        style={{ paddingRight: 4 }}
+      >
         <Text style={{ color: '#2d6cdf' }}>Logout</Text>
       </Pressable>
     </View>
@@ -59,11 +67,13 @@ export default function TabsLayout() {
         <>
           <Tabs.Screen name="payout" options={{ title: 'Payout' }} />
           <Tabs.Screen name="admin-users" options={{ title: 'Admin: Users' }} />
+          <Tabs.Screen name="admin-tasks" options={{ title: 'Admin: Tasks' }} />
         </>
       ) : (
         <>
           <Tabs.Screen name="payout" options={{ href: null }} />
           <Tabs.Screen name="admin-users" options={{ href: null }} />
+          <Tabs.Screen name="admin-tasks" options={{ href: null }} />
         </>
       )}
     </Tabs>

@@ -1,20 +1,20 @@
 // app/(tabs)/payout.tsx
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   SafeAreaView,
   ScrollView,
   Text,
   View,
-  Pressable,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { confirmPayout, getPayoutPreview, PreviewLine } from '../../src/api/payout';
 import { useAuth } from '../../src/state/auth';
-import { useData } from '../../src/state/data';
 import { useSelectedChild } from '../../src/state/child';
-import { getPayoutPreview, confirmPayout, PreviewLine } from '../../src/api/payout';
+import { useData } from '../../src/state/data';
 
 function n(v: number | string | null | undefined) {
   const x = Number(v ?? 0);
