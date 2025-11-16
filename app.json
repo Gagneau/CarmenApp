@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kyrill.carmenapp",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -49,8 +52,9 @@
       "reactCompiler": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "YOUR_PROJECT_ID_WILL_BE_ADDED_BY_EAS"
+        "projectId": "99f801fc-2978-412a-bc23-90ccaf0c9772"
       }
     }
   }

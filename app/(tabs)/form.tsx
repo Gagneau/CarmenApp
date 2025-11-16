@@ -9,20 +9,21 @@ import {
   Pressable,
   TextInput,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { getTasks, Task, TimeReward } from '../../src/api/tasks';
 import { submitSubmission } from '../../src/api/submissions';
 import { useAuth } from '../../src/state/auth';
 import { useData } from '../../src/state/data';
-import { useSelectedChild } from '../../src/state/child';
+import { CARMEN_ID } from '../../src/config/child';
 
 function formatTime(t: TimeReward) {
   switch (t) {
     case 'MIN_15': return '15 min';
-    case 'HOUR_1': return '1 hour';
+    case 'HOUR_1': return '1 heure';
     case 'NEG_MIN_15': return '−15 min';
-    case 'NEG_HOUR_1': return '−1 hour';
+    case 'NEG_HOUR_1': return '−1 heure';
     default: return '–';
   }
 }
@@ -38,8 +39,9 @@ export default function FormScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { invalidate } = useData();
-  const { childId, childName } = useSelectedChild();
 
+  // Single-child setup: always Carmen
+  const childId = CARMEN_ID;
   const ADULT_ID = user?.user_id ?? '';
 
   const [loading, setLoading] = useState(true);
@@ -91,17 +93,21 @@ export default function FormScreen() {
   const groups = useMemo(() => {
     const map = new Map<string, Task[]>();
     for (const t of tasks) {
-      const k = t.category || 'Other';
+      const k = t.category || 'Autre';
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(t);
     }
     return Array.from(map.entries())
-      .map(([category, items]) => ({ category, items: items.sort((a, b) => a.name.localeCompare(b.name)) }))
+      .map(([category, items]) => ({
+        category,
+        items: items.sort((a, b) => a.name.localeCompare(b.name)),
+      }))
       .sort((a, b) => a.category.localeCompare(b.category));
   }, [tasks]);
 
   const clamp = (n: number) => Math.max(0, Math.min(999, Number.isFinite(n) ? Math.trunc(n) : 0));
-  const setQty = (code: string, value: number) => setQtys((prev) => ({ ...prev, [code]: clamp(value) }));
+  const setQty = (code: string, value: number) =>
+    setQtys((prev) => ({ ...prev, [code]: clamp(value) }));
   const inc = (code: string) => setQty(code, (qtys[code] || 0) + 1);
   const dec = (code: string) => setQty(code, (qtys[code] || 0) - 1);
   const onEdit = (code: string, text: string) => {
@@ -110,7 +116,10 @@ export default function FormScreen() {
   };
 
   const itemsToSubmit = useMemo(
-    () => Object.entries(qtys).filter(([, q]) => (q || 0) > 0).map(([task_code, quantity]) => ({ task_code, quantity })),
+    () =>
+      Object.entries(qtys)
+        .filter(([, q]) => (q || 0) > 0)
+        .map(([task_code, quantity]) => ({ task_code, quantity })),
     [qtys]
   );
 
@@ -119,7 +128,6 @@ export default function FormScreen() {
     try {
       setSubmitting(true); setSubmitErr(null); setSubmitOk(null);
       if (!ADULT_ID) throw new Error('No logged-in user');
-      if (!childId) throw new Error('No selected child');
 
       const res = await submitSubmission({
         adult_id: ADULT_ID,
@@ -140,7 +148,6 @@ export default function FormScreen() {
 
       // Notify other tabs
       invalidate();
-
     } catch (e: any) {
       setSubmitErr(e?.message || 'Failed to submit');
     } finally {
@@ -151,39 +158,82 @@ export default function FormScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
-        <Text style={{ fontSize: 22, fontWeight: '700', color: '#111' }}>Form</Text>
-        {!!childName && <Text style={{ color: '#666' }}>For: {childName}</Text>}
+        {/* Titles updated */}
+        <Text style={{ fontSize: 22, fontWeight: '700', color: '#111' }}>
+          Insérez les accomplissements
+        </Text>
+        <Text style={{ color: '#666' }}>Pour : Carmen</Text>
 
         {submitOk && (
-          <View style={{ backgroundColor: '#e8f7ee', borderColor: '#b9e4c6', borderWidth: 1, padding: 12, borderRadius: 10, gap: 6 }}>
-            <Text style={{ color: '#127c39', fontWeight: '700' }}>Submitted ✓</Text>
+          <View
+            style={{
+              backgroundColor: '#e8f7ee',
+              borderColor: '#b9e4c6',
+              borderWidth: 1,
+              padding: 12,
+              borderRadius: 10,
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: '#127c39', fontWeight: '700' }}>Soumis ✓</Text>
             <Text style={{ color: '#127c39' }}>
-              Time: {submitOk.time} • Money: €{Number(submitOk.money).toFixed ? Number(submitOk.money).toFixed(2) : submitOk.money}
+              Temps : {submitOk.time} • Argent : €
+              {Number(submitOk.money).toFixed
+                ? Number(submitOk.money).toFixed(2)
+                : submitOk.money}
             </Text>
-            <Pressable onPress={() => router.replace('/(tabs)/totals')} style={{ paddingVertical: 8 }}>
-              <Text style={{ color: '#2d6cdf' }}>Go to Totals</Text>
+            <Pressable
+              onPress={() => router.replace('/(tabs)/totals')}
+              style={{ paddingVertical: 8 }}
+            >
+              <Text style={{ color: '#2d6cdf' }}>Aller aux totaux</Text>
             </Pressable>
           </View>
         )}
         {submitErr && (
-          <View style={{ backgroundColor: '#fde7e9', borderColor: '#f2b2b8', borderWidth: 1, padding: 12, borderRadius: 10 }}>
+          <View
+            style={{
+              backgroundColor: '#fde7e9',
+              borderColor: '#f2b2b8',
+              borderWidth: 1,
+              padding: 12,
+              borderRadius: 10,
+            }}
+          >
             <Text style={{ color: '#b00020' }}>{submitErr}</Text>
           </View>
         )}
 
-        {/* (Keep your loading/error/empty blocks from earlier here) */}
-
-        {/* Render task groups + qty controls */}
         {groups.map(({ category, items }) => (
-          <View key={category} style={{ backgroundColor: '#fafafa', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, gap: 8 }}>
+          <View
+            key={category}
+            style={{
+              backgroundColor: '#fafafa',
+              borderWidth: 1,
+              borderColor: '#eee',
+              borderRadius: 12,
+              padding: 12,
+              gap: 8,
+            }}
+          >
             <Text style={{ color: '#222', fontWeight: '700' }}>{category}</Text>
             {items.map((t) => {
               const q = qtys[t.code] || 0;
               return (
-                <View key={t.code} style={{
-                  backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 10,
-                  padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-                }}>
+                <View
+                  key={t.code}
+                  style={{
+                    backgroundColor: '#fff',
+                    borderWidth: 1,
+                    borderColor: '#eee',
+                    borderRadius: 10,
+                    padding: 12,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text style={{ color: '#111', fontWeight: '600' }}>{t.name}</Text>
                     <Text style={{ color: '#666', fontSize: 12 }}>
@@ -192,10 +242,19 @@ export default function FormScreen() {
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Pressable onPress={() => setQty(t.code, q - 1)} style={{
-                      width: 36, height: 36, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb',
-                      backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center',
-                    }}>
+                    <Pressable
+                      onPress={() => setQty(t.code, q - 1)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#e5e7eb',
+                        backgroundColor: '#f8fafc',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
                       <Text style={{ color: '#111', fontSize: 18 }}>−</Text>
                     </Pressable>
 
@@ -209,16 +268,33 @@ export default function FormScreen() {
                       inputMode="numeric"
                       maxLength={3}
                       style={{
-                        width: 56, height: 36, textAlign: 'center', color: '#111',
-                        backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingVertical: 6,
+                        width: 56,
+                        height: 36,
+                        textAlign: 'center',
+                        color: '#111',
+                        backgroundColor: '#fff',
+                        borderWidth: 1,
+                        borderColor: '#e5e7eb',
+                        borderRadius: 8,
+                        paddingVertical: 6,
                       }}
                     />
 
-                    <Pressable onPress={() => setQty(t.code, q + 1)} style={{
-                      width: 36, height: 36, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb',
-                      backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Text style={{ color: '#111', fontSize: 18 }}>＋</Text>
+                    {/* + button — white plus on blue background */}
+                    <Pressable
+                      onPress={() => setQty(t.code, q + 1)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: 'rgb(7, 68, 149)',
+                        backgroundColor: 'rgb(7, 68, 149)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 18 }}>＋</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -232,13 +308,23 @@ export default function FormScreen() {
             onPress={onSubmit}
             disabled={submitting || itemsToSubmit.length === 0}
             style={{
+              borderRadius: 10,
+              overflow: 'hidden',
               opacity: submitting || itemsToSubmit.length === 0 ? 0.5 : 1,
-              backgroundColor: '#2d6cdf', paddingVertical: 14, borderRadius: 10, alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '700' }}>
-              {submitting ? 'Submitting…' : `Submit (${itemsToSubmit.length} items)`}
-            </Text>
+            <LinearGradient
+              colors={['rgb(117, 76, 172)', 'rgb(48, 68, 155)']} // left → right
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: 14, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700' }}>
+                {submitting
+                  ? 'Soumission…'
+                  : `Valider (${itemsToSubmit.length} éléments)`}
+              </Text>
+            </LinearGradient>
           </Pressable>
         </View>
       </ScrollView>

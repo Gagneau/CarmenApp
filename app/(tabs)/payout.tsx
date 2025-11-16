@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { confirmPayout, getPayoutPreview, PreviewLine } from '../../src/api/payout';
 import { useAuth } from '../../src/state/auth';
-import { useSelectedChild } from '../../src/state/child';
 import { useData } from '../../src/state/data';
+import { CARMEN_ID } from '../../src/config/child';
 
 function n(v: number | string | null | undefined) {
   const x = Number(v ?? 0);
@@ -25,7 +25,10 @@ export default function PayoutScreen() {
   const router = useRouter();
   const { user, ready, signOut } = useAuth();
   const { version } = useData();
-  const { childId, childName } = useSelectedChild();
+
+  // Single-child setup: always Carmen
+  const childId = CARMEN_ID;
+  const childName = 'Carmen';
   const isAdmin = user?.role === 'admin';
 
   if (ready && !isAdmin) {
@@ -105,7 +108,11 @@ export default function PayoutScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 24, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPreview(false); }} tintColor="#2d6cdf" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchPreview(false); }}
+            tintColor="#2d6cdf"
+          />
         }
       >
         <View style={{ gap: 4 }}>
@@ -151,24 +158,35 @@ export default function PayoutScreen() {
 
         {!loading && !error && hasAnythingToPay && Array.isArray(lines) && lines.length > 0 && (
           <View style={{ gap: 12 }}>
-            {lines.slice().sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).map((l) => (
-              <View key={l.code} style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 12, gap: 4 }}>
-                <Text style={{ color: '#111', fontWeight: '600' }}>{l.name}</Text>
-                <Text style={{ color: '#666', fontSize: 12 }}>{l.category}</Text>
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <Text style={{ color: '#666' }}>Time: {n(l.chosen_time)} min</Text>
-                  <Text style={{ color: '#666' }}>Money: €{n(l.chosen_money).toFixed(2)}</Text>
+            {lines
+              .slice()
+              .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
+              .map((l) => (
+                <View key={l.code} style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 12, gap: 4 }}>
+                  <Text style={{ color: '#111', fontWeight: '600' }}>{l.name}</Text>
+                  <Text style={{ color: '#666', fontSize: 12 }}>{l.category}</Text>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <Text style={{ color: '#666' }}>Time: {n(l.chosen_time)} min</Text>
+                    <Text style={{ color: '#666' }}>Money: €{n(l.chosen_money).toFixed(2)}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
           </View>
         )}
 
         {!loading && !error && (
-          <Pressable onPress={onConfirm} disabled={!hasAnythingToPay || submitting} style={{
-            marginTop: 12, opacity: !hasAnythingToPay || submitting ? 0.5 : 1,
-            backgroundColor: '#2d6cdf', paddingVertical: 14, borderRadius: 10, alignItems: 'center',
-          }}>
+          <Pressable
+            onPress={onConfirm}
+            disabled={!hasAnythingToPay || submitting}
+            style={{
+              marginTop: 12,
+              opacity: !hasAnythingToPay || submitting ? 0.5 : 1,
+              backgroundColor: '#2d6cdf',
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: 'center',
+            }}
+          >
             <Text style={{ color: '#fff', fontWeight: '700' }}>
               {submitting ? 'Confirming…' : 'Confirm Payout'}
             </Text>

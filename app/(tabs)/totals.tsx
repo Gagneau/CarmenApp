@@ -15,7 +15,7 @@ import { getTotals, TotalsRow } from '../../src/api/totals';
 import { setPreference, Preference } from '../../src/api/preferences';
 import { useAuth } from '../../src/state/auth';
 import { useData } from '../../src/state/data';
-import { useSelectedChild } from '../../src/state/child';
+import { CARMEN_ID } from '../../src/config/child';
 
 function toNumber(v: number | string | null | undefined) {
   const n = Number(v ?? 0);
@@ -26,7 +26,9 @@ export default function TotalsScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { version, invalidate } = useData();
-  const { childId, childName } = useSelectedChild();
+
+  // Single-child setup: always Carmen
+  const childId = CARMEN_ID;
   const isAdmin = user?.role === 'admin';
 
   const [loading, setLoading] = useState(true);
@@ -42,13 +44,22 @@ export default function TotalsScreen() {
       const data = await getTotals(childId);
       const arr = Array.isArray(data) ? data : [];
       setRows(arr);
+
+      // Initialize preferences from backend (TIME/MONEY) per task
       setPrefs((prev) => {
-        const next = { ...prev };
+        const next: Record<string, Preference> = { ...prev };
         for (const r of arr) {
           const time = toNumber(r.time_minutes_total);
           const money = toNumber(r.money_total_eur);
           const canChoose = time > 0 && Math.abs(money) > 0;
-          if (canChoose && !next[r.code]) next[r.code] = 'MONEY';
+          if (!canChoose) continue;
+
+          if (r.preference === 'TIME' || r.preference === 'MONEY') {
+            next[r.code] = r.preference;
+          } else if (!next[r.code]) {
+            // Default only if nothing stored yet
+            next[r.code] = 'MONEY';
+          }
         }
         return next;
       });
@@ -69,7 +80,7 @@ export default function TotalsScreen() {
   const groups = useMemo(() => {
     const map = new Map<string, TotalsRow[]>();
     for (const r of rows) {
-      const k = r.category || 'Other';
+      const k = r.category || 'Autre';
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(r);
     }
@@ -102,27 +113,34 @@ export default function TotalsScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 24, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchTotals(false); }} tintColor="#2d6cdf" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchTotals(false); }}
+            tintColor="#2d6cdf"
+          />
         }
       >
         <View style={{ gap: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: '#111' }}>Totals</Text>
-            {!!childName && <Text style={{ color: '#666' }}>For: {childName}</Text>}
+            <Text style={{ fontSize: 22, fontWeight: '700', color: '#111' }}>Totaux</Text>
+            <Text style={{ color: '#666' }}>Pour : Carmen</Text>
             {!loading && (
               <Text style={{ color: '#666' }}>
-                {totalTasksPending > 0 ? `${totalTasksPending} task${totalTasksPending > 1 ? 's' : ''} pending` : 'Nothing pending'}
+                {totalTasksPending > 0 ? `${totalTasksPending} tâche${totalTasksPending > 1 ? 's' : ''} en attente` : 'Aucune tâche en attente'}
               </Text>
             )}
           </View>
-          <Pressable onPress={() => fetchTotals(false)} style={{ backgroundColor: '#eef2ff', borderColor: '#c7d2fe', borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }}>
-            <Text style={{ color: '#4338ca', fontWeight: '600' }}>Refresh</Text>
+          <Pressable
+            onPress={() => fetchTotals(false)}
+            style={{ backgroundColor: '#eef2ff', borderColor: '#c7d2fe', borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }}
+          >
+            <Text style={{ color: '#4338ca', fontWeight: '600' }}>Actualiser</Text>
           </Pressable>
         </View>
 
         {loading && (
           <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-            <ActivityIndicator /><Text style={{ marginTop: 8, color: '#666' }}>Loading totals…</Text>
+            <ActivityIndicator /><Text style={{ marginTop: 8, color: '#666' }}>Chargement des totaux…</Text>
           </View>
         )}
         {!loading && error && (
@@ -132,8 +150,8 @@ export default function TotalsScreen() {
         )}
         {!loading && !error && groups.length === 0 && (
           <View style={{ backgroundColor: '#fafafa', borderColor: '#eee', borderWidth: 1, padding: 16, borderRadius: 10 }}>
-            <Text style={{ color: '#333', fontWeight: '600' }}>No pending items</Text>
-            <Text style={{ color: '#666' }}>Submit items from the Form tab, then refresh this page.</Text>
+            <Text style={{ color: '#333', fontWeight: '600' }}>Aucun élément en attente</Text>
+            <Text style={{ color: '#666' }}>Soumettez des éléments depuis l’onglet Formulaire, puis actualisez cette page.</Text>
           </View>
         )}
 
@@ -149,13 +167,18 @@ export default function TotalsScreen() {
                 <View key={r.code} style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', borderRadius: 10, padding: 12, gap: 6 }}>
                   <Text style={{ color: '#111', fontWeight: '600' }}>{r.name}</Text>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <Text style={{ color: '#666' }}>Time: {time} min</Text>
-                    <Text style={{ color: '#666' }}>Money: €{toNumber(money).toFixed(2)}</Text>
+                    <Text style={{ color: '#666' }}>Temps : {time} min</Text>
+                    <Text style={{ color: '#666' }}>Argent : €{toNumber(money).toFixed(2)}</Text>
                   </View>
                   {canChoose ? (
-                    <Segmented value={current as Preference} onChange={(v) => onToggle(r.code, v)} />
+                    <Segmented
+                      value={current as Preference}
+                      onChange={(v) => onToggle(r.code, v)}
+                      timeMinutes={time}
+                      moneyEur={money}
+                    />
                   ) : (
-                    <Text style={{ color: '#999', fontSize: 12 }}>Fixed: {time > 0 ? 'Time' : 'Money'}</Text>
+                    <Text style={{ color: '#999', fontSize: 12 }}>Fixé : {time > 0 ? 'Temps' : 'Argent'}</Text>
                   )}
                 </View>
               );
@@ -167,15 +190,73 @@ export default function TotalsScreen() {
   );
 }
 
-function Segmented({ value, onChange }: { value: Preference; onChange: (v: Preference) => void; }) {
+function Segmented({
+  value,
+  onChange,
+  timeMinutes,
+  moneyEur,
+}: {
+  value: Preference;
+  onChange: (v: Preference) => void;
+  timeMinutes: number;
+  moneyEur: number;
+}) {
   const isTime = value === 'TIME';
+  const isMoney = value === 'MONEY';
+
+  const euro = (n: number) => `€${Number(n ?? 0).toFixed(2)}`;
+
   return (
-    <View style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 999, overflow: 'hidden', flexDirection: 'row' }}>
-      <Pressable onPress={() => onChange('TIME')} style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: isTime ? '#2d6cdf' : '#fff' }}>
-        <Text style={{ color: isTime ? '#fff' : '#111' }}>Time</Text>
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: 999,
+        overflow: 'hidden',
+        flexDirection: 'row',
+        alignSelf: 'flex-start',
+      }}
+    >
+      {/* TIME button */}
+      <Pressable
+        onPress={() => onChange('TIME')}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isTime }}
+        style={{
+          paddingVertical: 6,
+          paddingHorizontal: 12,
+          backgroundColor: isTime ? '#2d6cdf' : '#eef5ff',
+        }}
+      >
+        <Text
+          style={{
+            color: isTime ? '#fff' : '#0f172a',
+            fontWeight: '600',
+          }}
+        >
+          Temps : {timeMinutes} min
+        </Text>
       </Pressable>
-      <Pressable onPress={() => onChange('MONEY')} style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: !isTime ? '#2d6cdf' : '#fff' }}>
-        <Text style={{ color: !isTime ? '#fff' : '#111' }}>Money</Text>
+
+      {/* MONEY button */}
+      <Pressable
+        onPress={() => onChange('MONEY')}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isMoney }}
+        style={{
+          paddingVertical: 6,
+          paddingHorizontal: 12,
+          backgroundColor: isMoney ? '#4338ca' : '#f1edff',
+        }}
+      >
+        <Text
+          style={{
+            color: isMoney ? '#fff' : '#0f172a',
+            fontWeight: '600',
+          }}
+        >
+          Argent : {euro(moneyEur)}
+        </Text>
       </Pressable>
     </View>
   );
